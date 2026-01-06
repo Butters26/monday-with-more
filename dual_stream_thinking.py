@@ -77,7 +77,7 @@ class DualStreamThinking:
                 topic = meta_response.get("topic", "unknown")
                 question = meta_response.get("question", f"Think about {topic}")
                 
-                self.controlled.start_reasoning(topic, question, depth=3)
+                self.controlled.start_reasoning(question, priority=5, depth=3)
                 
                 # Take reasoning steps
                 for i in range(3):
