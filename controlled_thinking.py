@@ -42,7 +42,7 @@ class ControlledThinking:
         self.conclusions: List[str] = []
         
     def start_reasoning(self, goal_description: str, priority: int = 5, 
-                       context: Optional[Dict[str, Any]] = None) -> ReasoningGoal:
+                       context: Optional[Dict[str, Any]] = None, depth: Optional[int] = None) -> ReasoningGoal:
         """
         Start a new reasoning process with a specific goal.
         
@@ -50,12 +50,17 @@ class ControlledThinking:
             goal_description: What we're trying to reason about
             priority: Priority level (1-10)
             context: Additional context information
+            depth: Optional max depth for this reasoning session
             
         Returns:
             The created ReasoningGoal
         """
         if context is None:
             context = {}
+        
+        # Optionally update max depth for this session
+        if depth is not None:
+            self.max_reasoning_depth = depth
             
         self.current_goal = ReasoningGoal(
             description=goal_description,
@@ -226,6 +231,63 @@ class ControlledThinking:
         self.reasoning_chain = []
         self.attention_focus = None
         self.conclusions = []
+    
+    @property
+    def is_focused(self) -> bool:
+        """
+        Check if the system is currently in a focused reasoning state.
+        
+        Returns:
+            True if there's an active goal that's not completed
+        """
+        return self.current_goal is not None and not self.current_goal.completed
+    
+    def reason_step(self) -> Optional[Dict[str, Any]]:
+        """
+        Take an automatic reasoning step based on current goal.
+        Used by dual-stream thinking to advance controlled reasoning.
+        
+        Returns:
+            The reasoning step that was taken, or None if no active goal
+        """
+        if not self.is_focused:
+            return None
+        
+        # Check if we've reached max depth
+        if len(self.reasoning_chain) >= self.max_reasoning_depth:
+            # Auto-synthesize conclusion
+            if not self.current_goal.completed:
+                self.synthesize_conclusion(force=True)
+            return None
+        
+        # Generate a reasoning step based on current state
+        step_number = len(self.reasoning_chain)
+        
+        # Different types of steps based on progress
+        if step_number <= 2:
+            # Early: analysis
+            content = f"Analyzing aspect #{step_number} of {self.current_goal.description}"
+            step_type = "analysis"
+        elif step_number <= 5:
+            # Middle: hypothesis or evaluation
+            content = f"Considering implications of {self.attention_focus}"
+            step_type = "hypothesis"
+        else:
+            # Later: synthesis or conclusion
+            content = f"Integrating insights about {self.current_goal.description}"
+            step_type = "synthesis"
+        
+        # Take the step
+        step = self.take_reasoning_step(content, step_type)
+        
+        # Print the step for visibility
+        print(f"         [STEP {step_number}] {content}")
+        
+        # Check if we should conclude
+        if step_number >= 5:
+            self.synthesize_conclusion(force=True)
+        
+        return step
     
     def _add_reasoning_step(self, step_type: str, content: str,
                            metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
