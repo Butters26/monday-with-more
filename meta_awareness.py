@@ -204,11 +204,9 @@ class MetaAwareness:
     
     def get_meta_state_summary(self) -> Dict[str, Any]:
         """Get summary of meta-cognitive state"""
-        total_thoughts = self.thoughts_noticed + (self.thoughts_engaged - self.thoughts_noticed) + self.thoughts_dismissed
-        if self.thoughts_noticed + self.thoughts_dismissed == 0:
-            total_noticed = 1  # Avoid division by zero
-        else:
-            total_noticed = self.thoughts_noticed + self.thoughts_dismissed
+        # Total thoughts is the sum of noticed and dismissed thoughts
+        # (engaged is a subset of noticed, so we don't double-count)
+        total_noticed = self.thoughts_noticed + self.thoughts_dismissed
         
         return {
             "mode": self.state.mode.value,

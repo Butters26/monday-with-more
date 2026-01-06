@@ -97,6 +97,10 @@ class ContinuousThoughtGenerator:
         # Minimum 0.5 seconds, max 8 seconds
         return max(0.5, min(8.0, interval))
     
+    def get_thought_interval(self) -> float:
+        """Public method to get the next thought interval"""
+        return self._calculate_thought_interval()
+    
     def _choose_trigger(self) -> str:
         """Choose what triggers this thought based on current state"""
         # Weight triggers based on emotional/cognitive state

@@ -113,7 +113,7 @@ class DualStreamThinking:
             })
             
             # Calculate next spontaneous thought interval
-            interval = self.spontaneous._calculate_thought_interval()
+            interval = self.spontaneous.get_thought_interval()
             
             # Wait before next spontaneous thought
             time.sleep(interval)

@@ -18,6 +18,7 @@ class ReasoningGoal:
     created_at: datetime = field(default_factory=datetime.utcnow)
     completed: bool = False
     conclusion: Optional[str] = None
+    max_depth: Optional[int] = None  # Optional per-goal depth limit
 
 
 class ControlledThinking:
@@ -57,15 +58,12 @@ class ControlledThinking:
         """
         if context is None:
             context = {}
-        
-        # Optionally update max depth for this session
-        if depth is not None:
-            self.max_reasoning_depth = depth
             
         self.current_goal = ReasoningGoal(
             description=goal_description,
             priority=priority,
-            context=context
+            context=context,
+            max_depth=depth
         )
         
         self.reasoning_chain = []
@@ -97,8 +95,11 @@ class ControlledThinking:
         if not self.current_goal:
             raise ValueError("No active reasoning goal. Call start_reasoning() first.")
         
-        if len(self.reasoning_chain) >= self.max_reasoning_depth:
-            raise ValueError(f"Maximum reasoning depth ({self.max_reasoning_depth}) reached.")
+        # Use goal-specific depth if set, otherwise use default
+        max_depth = self.current_goal.max_depth if self.current_goal.max_depth is not None else self.max_reasoning_depth
+        
+        if len(self.reasoning_chain) >= max_depth:
+            raise ValueError(f"Maximum reasoning depth ({max_depth}) reached.")
         
         step = self._add_reasoning_step(step_type, thought, metadata)
         
@@ -253,8 +254,11 @@ class ControlledThinking:
         if not self.is_focused:
             return None
         
+        # Use goal-specific depth if set, otherwise use default
+        max_depth = self.current_goal.max_depth if self.current_goal.max_depth is not None else self.max_reasoning_depth
+        
         # Check if we've reached max depth
-        if len(self.reasoning_chain) >= self.max_reasoning_depth:
+        if len(self.reasoning_chain) >= max_depth:
             # Auto-synthesize conclusion
             if not self.current_goal.completed:
                 self.synthesize_conclusion(force=True)
@@ -283,8 +287,9 @@ class ControlledThinking:
         # Print the step for visibility
         print(f"         [STEP {step_number}] {content}")
         
-        # Check if we should conclude
-        if step_number >= 5:
+        # Check if we should conclude (use goal-specific or default max depth)
+        conclusion_threshold = min(5, max_depth - 1)
+        if step_number >= conclusion_threshold:
             self.synthesize_conclusion(force=True)
         
         return step
